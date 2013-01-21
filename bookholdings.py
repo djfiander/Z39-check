@@ -47,19 +47,13 @@ def z39_query(conn, rec):
             connects += 1
     return res
 
-def isbn13to10(isbn):
-    isbn = isbn[3:-1]
-    ck = 11 - sum(map(operator.mul, range(10, 1, -1), map(int, isbn))) % 11
-    return isbn + str(ck) if ck != 10 else 'X'
-
 def processFile(ifp, ofp, conn, checkxISBN=False):
     global inlines, found
     icvs = csv.DictReader(ifp)
 
     for rec in (icvs):
         inlines += 1
-        if len(rec['ISBN']) == 13:
-            rec['ISBN'] = isbn13to10(rec['ISBN'])
+
         try:
             xISBN.validate(rec['ISBN'])
         except xISBN.BadISBN, ex:
