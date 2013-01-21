@@ -2,8 +2,9 @@
 import sys, getopt, time, operator
 import csv
 
-from PyZ3950 import zoom
 import xISBN
+
+import z39query
 
 #z3950.trace_init = 1
 
@@ -12,40 +13,6 @@ worldcat = '<a href="http://worldcat.org/isbn/%s" target="worldcat">worldcat</a>
 
 inlines = 0
 found = 0
-connects = 1
-
-def z39_connect(host='alpha.lib.uwo.ca', port=210,
-                db='INNOPAC', syntax='USMARC'):
-    conn = zoom.Connection(host, port)
-    conn.databaseName = db
-    conn.preferredRecordSyntax = syntax
-    return conn
-
-def z39_query(conn, rec):
-    global connects
-
-    query = 'isbn=%(ISBN)s'
-    q = zoom.Query('CCL', query % rec)
-
-    # The Innovative Z39.50 server has a concurrent use limit, and
-    # it seems to decide in the middle of a connection that you're no
-    # longer deemed acceptable, so when we lose the connection, just
-    # wait a sec (or five) and reconnect.
-    while True:
-        try:
-            res = conn.search(q)
-            break
-        except zoom.ConnectionError, arg:
-            conn.close ()
-            if str(arg) != 'graceful close':
-                sys.stderr.write("Server disconnected on %s: '%s'\n" %
-                                 ((query % rec), arg))
-                print conn.__dict__
-                sys.exit()
-            time.sleep(5)
-            conn.connect()
-            connects += 1
-    return res
 
 def processFile(ifp, ofp, conn, checkxISBN=False):
     global inlines, found
@@ -62,13 +29,13 @@ def processFile(ifp, ofp, conn, checkxISBN=False):
             continue
 
         status = 'own'
-        res = z39_query(conn, rec)
+        res = z39query.query(conn, rec)
         if checkxISBN and len(res) == 0:
             status = 'related'
             try:
                 for altISBN in xISBN.xISBN(rec['ISBN']):
                     rec['ISBN'] = altISBN
-                    res = z39_query(conn, rec)
+                    res = z39query.query(conn, rec)
                     if len(res) > 0:
                         break
             except IOError:
@@ -90,7 +57,6 @@ def processFile(ifp, ofp, conn, checkxISBN=False):
         ofp.write('</td></tr>\n')
 
 def main():
-    global connects
     host = 'alpha.lib.uwo.ca'
     port = 210
     dbname = 'INNOPAC'
@@ -127,7 +93,7 @@ def main():
 <tr><th>UWO Catalogue</th><th>WorldCAT</th><th>Title</th></tr>
 """
 
-    conn = z39_connect(host, port, dbname)
+    conn = z39query.connect(host, port, dbname)
     sys.stderr.write("Connected to %s, implementation ID = '%s'\n" %
                      (conn.host, conn.targetImplementationId))
 
@@ -147,7 +113,7 @@ def main():
     ofp.close()
 
     sys.stderr.write("Processed %d titles and found %d with %d connections\n" %
-                     (inlines, found, connects))
+                     (inlines, found, z39query.connects))
 
 if __name__ == "__main__":
     main()
