@@ -55,13 +55,14 @@ def validate(isbn):
         else:
             ckdig = int(ckdig)
         if len(isbn) == 10:
-            ck = sum(map(operator.mul, range(10, 1, -1), map(int, num))) + ckdig
-            if (ck % 11) != 0:
-                raise BadISBN('Invalid checksum', isbn)
+            ck = sum(map(operator.mul, range(10, 1, -1), map(int, num)), ckdig)
+            ck %= 11
         else: # len(isbn) == 13
             ck = sum(map(operator.mul, ((1, 3) * 6), map(int, num)))
-            if (10 - (ck % 10)) % 10 != ckdig:
-                raise BadISBN('Invalid checksum', isbn)
+            ck = (10 - (ck % 10)) % 10 - ckdig
+
+        if ck != 0:
+            raise BadISBN('Invalid checksum', isbn)
     except ValueError:
         raise BadISBN('Invalid digit', isbn)
     return True
