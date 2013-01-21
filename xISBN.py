@@ -45,7 +45,7 @@ class idlistHandler(xml.sax.handler.ContentHandler):
 
 def validate(isbn):
     """Verify checksum of ISBN.  Returns if valid, throws exception if not."""
-    if len(isbn) != 10:
+    if (len(isbn) != 10) and (len(isbn) != 13):
         raise BadISBN('Invalid length', isbn)
     num, ckdig = isbn[:-1], isbn[-1]
 
@@ -54,11 +54,17 @@ def validate(isbn):
             ckdig = 10
         else:
             ckdig = int(ckdig)
-        ck = sum(map(operator.mul, range(10, 1, -1), map(int, num))) + ckdig
+        if len(isbn) == 10:
+            ck = sum(map(operator.mul, range(10, 1, -1), map(int, num))) + ckdig
+            if (ck % 11) != 0:
+                raise BadISBN('Invalid checksum', isbn)
+        else: # len(isbn) == 13
+            ck = sum(map(operator.mul, zip(num, (1, 3) * 6, map(int, num))))
+            if (10 - (ck % 10)) % 10 != ckdig:
+                raise BadISBN('Invalid checksum', isbn)
     except ValueError:
         raise BadISBN('Invalid digit', isbn)
-    if (ck % 11) != 0:
-        raise BadISBN('Invalid checksum', isbn)
+    return True
 
 def xISBN(isbn):
     """Send ISBN to the OCLC xISBN service and return the list of related ISBNs.
