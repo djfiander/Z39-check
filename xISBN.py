@@ -59,7 +59,7 @@ def validate(isbn):
             if (ck % 11) != 0:
                 raise BadISBN('Invalid checksum', isbn)
         else: # len(isbn) == 13
-            ck = sum(map(operator.mul, zip(num, (1, 3) * 6, map(int, num))))
+            ck = sum(map(operator.mul, ((1, 3) * 6), map(int, num)))
             if (10 - (ck % 10)) % 10 != ckdig:
                 raise BadISBN('Invalid checksum', isbn)
     except ValueError:
@@ -94,3 +94,4 @@ Throws a 'BadISBN' exception if the ISBN is invalid."""
 
 if __name__ == '__main__':
     print xISBN('0-596-00797-3')
+    print xISBN('9780060007447')
