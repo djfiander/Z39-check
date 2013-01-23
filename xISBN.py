@@ -12,20 +12,20 @@ import xml.sax.handler
 class BadISBN(Exception):
     pass
 
-_servicepoint = 'http://old-xisbn.oclc.org/webservices/xisbn/%s'
+_servicepoint = 'http://xisbn.worldcat.org/webservices/xid/isbn/%s'
 
 class idlistHandler(xml.sax.handler.ContentHandler):
     def __init__(self):
-        self.inIDlist = None;
+        self.inrsp = None;
         self.inISBN = None;
         self.isbns = [];
 
     def startElement(self, name, attributes):
-        if name == 'idlist':
-            if self.inIDlist: raise xml.sax.SAXParseException('Nested idlists')
-            self.inIDlist = 1
+        if name == 'rsp':
+            if self.inrsp: raise xml.sax.SAXParseException('Nested rsps')
+            self.inrsp = 1
         elif name == 'isbn':
-            if not self.inIDlist:
+            if not self.inrsp:
                 raise xml.sax.SAXParseException('Unnested ISBN')
             self.buffer = ''
             self.inISBN = 1
@@ -38,8 +38,8 @@ class idlistHandler(xml.sax.handler.ContentHandler):
         if name == 'isbn':
             self.inISBN = None
             self.isbns.append(self.buffer)
-        elif name == 'idlist':
-            self.inIDlist = None
+        elif name == 'rsp':
+            self.inrsp = None
             assert self.inISBN == None
             
 
