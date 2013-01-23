@@ -67,6 +67,11 @@ def validate(isbn):
         raise BadISBN('Invalid digit', isbn)
     return True
 
+def register(ai):
+    """Register my affiliate ID to pass to the service point"""
+    global _servicepoint
+    _servicepoint = _servicepoint % '%s&ai=' + ai
+
 def xISBN(isbn):
     """Send ISBN to the OCLC xISBN service and return the list of related ISBNs.
 
