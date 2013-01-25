@@ -7,44 +7,20 @@
 import urllib
 import operator
 
-import xml.sax.handler
+import json
 
 class BadISBN(Exception):
     pass
 
-_servicepoint = 'http://xisbn.worldcat.org/webservices/xid/isbn/%s'
-
-class idlistHandler(xml.sax.handler.ContentHandler):
-    def __init__(self):
-        self.inrsp = None;
-        self.inISBN = None;
-        self.isbns = [];
-
-    def startElement(self, name, attributes):
-        if name == 'rsp':
-            if self.inrsp: raise xml.sax.SAXParseException('Nested rsps')
-            self.inrsp = 1
-        elif name == 'isbn':
-            if not self.inrsp:
-                raise xml.sax.SAXParseException('Unnested ISBN')
-            self.buffer = ''
-            self.inISBN = 1
-
-    def characters(self, data):
-        if self.inISBN:
-            self.buffer += data
-
-    def endElement(self, name):
-        if name == 'isbn':
-            self.inISBN = None
-            self.isbns.append(self.buffer)
-        elif name == 'rsp':
-            self.inrsp = None
-            assert self.inISBN == None
-            
+_servicepoint = 'http://xisbn.worldcat.org/webservices/xid/isbn/%s?format=json'
+_affiliateID = None
 
 def validate(isbn):
     """Verify checksum of ISBN.  Returns if valid, throws exception if not."""
+    # Canonicalize the ISBN by discarding embedded spaces and dashes
+    isbn = ''.join(isbn.split())
+    isbn = ''.join(isbn.split('-'))
+
     if (len(isbn) != 10) and (len(isbn) != 13):
         raise BadISBN('Invalid length', isbn)
     num, ckdig = isbn[:-1], isbn[-1]
@@ -69,8 +45,8 @@ def validate(isbn):
 
 def register(ai):
     """Register my affiliate ID to pass to the service point"""
-    global _servicepoint
-    _servicepoint = _servicepoint % '%s&ai=' + ai
+    global _affiliateID
+    _affiliateID = ai
 
 def xISBN(isbn):
     """Send ISBN to the OCLC xISBN service and return the list of related ISBNs.
@@ -80,24 +56,24 @@ return an empty list, if there are no other related ISBNs.
 
 Throws a 'BadISBN' exception if the ISBN is invalid."""
 
-    # Canonicalize the ISBN by discarding embedded spaces and dashes
-    isbn = ''.join(isbn.split())
-    isbn = ''.join(isbn.split('-'))
-
     validate(isbn)
-    urlf = urllib.urlopen(_servicepoint % isbn)
-    
-    parser = xml.sax.make_parser()
-    handler = idlistHandler()
-    parser.setContentHandler(handler)
-    parser.parse(urlf)
+    url = (_servicepoint % isbn)
+    if _affiliateID:
+        url += '&ai=' + _affiliateID
+    data = json.load(urllib.urlopen(url))
 
-    isbns = []
-    for i in handler.isbns:
-        if not (i == isbn):
-            isbns.append(i)
+    if (data['stat'] == 'ok'):
+        isbns = []
+        for entry in data['list']:
+            for i in entry['isbn']:
+                if not (i == isbn):
+                    isbns.append(i)
+    else:
+        raise BadISBN('xISBN Failed', data['stat'])
     return isbns
 
 if __name__ == '__main__':
+    register('djfiander')
     print xISBN('0-596-00797-3')
+    print xISBN('0596007973')
     print xISBN('9780060007447')
