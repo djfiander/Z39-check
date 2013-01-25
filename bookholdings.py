@@ -29,13 +29,12 @@ def processFile(ifp, ofp, conn, checkxISBN=False):
             continue
 
         status = 'own'
-        res = z39query.query(conn, rec)
+        res = conn.query('isbn=%(ISBN)s' % rec)
         if checkxISBN and len(res) == 0:
             status = 'related'
             try:
                 for altISBN in xISBN.xISBN(rec['ISBN']):
-                    rec['ISBN'] = altISBN
-                    res = z39query.query(conn, rec)
+                    res = conn.query('isbn=%s' % altISBN)
                     if len(res) > 0:
                         break
             except IOError:
@@ -65,6 +64,7 @@ def main():
     ofp = sys.stdout
 
     try:
+
         opts, args = getopt.getopt(sys.argv[1:], "h:p:d:o:vx")
     except getopt.GetoptError:
         sys.stderr.write("Usage: %s [-h host] [-p port] [-d dbname] [-o outfile] [-v]\n" %
@@ -93,9 +93,9 @@ def main():
 <tr><th>UWO Catalogue</th><th>WorldCAT</th><th>Title</th></tr>
 """
 
-    conn = z39query.connect(host, port, dbname)
+    conn = z39query.Z39query(host, port, dbname, 'USMARC')
     sys.stderr.write("Connected to %s, implementation ID = '%s'\n" %
-                     (conn.host, conn.targetImplementationId))
+                     (host, conn.targetImplementationId))
 
     if not args:
         processFile(sys.stdin, ofp, conn)
@@ -105,15 +105,14 @@ def main():
             processFile(ifp, ofp, conn, checkxISBN)
             ifp.close
 
-    conn.close()
-
     print >>ofp, """</table>
 </body>
 </html>"""
     ofp.close()
 
     sys.stderr.write("Processed %d titles and found %d with %d connections\n" %
-                     (inlines, found, z39query.connects))
+                     (inlines, found, conn.connects))
+    conn.close()
 
 if __name__ == "__main__":
     main()
