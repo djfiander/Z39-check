@@ -5,6 +5,7 @@
 # the list of all related ISBNs using OCLC's xISBN service
 
 import urllib
+import urllib2
 import operator
 
 import json
@@ -12,7 +13,7 @@ import json
 class BadISBN(Exception):
     pass
 
-_servicepoint = 'http://xisbn.worldcat.org/webservices/xid/isbn/%s?format=json'
+_servicepoint = 'http://xisbn.worldcat.org/webservices/xid/isbn/%s'
 _affiliateID = None
 
 def validate(isbn):
@@ -57,10 +58,12 @@ return an empty list, if there are no other related ISBNs.
 Throws a 'BadISBN' exception if the ISBN is invalid."""
 
     validate(isbn)
+    # We don't need to urlencode the ISBN because it's a valid ISBN
     url = (_servicepoint % isbn)
+    parms = [('format', 'json')]
     if _affiliateID:
-        url += '&ai=' + _affiliateID
-    data = json.load(urllib.urlopen(url))
+        parms += [('ai', _affiliateID)]
+    data = json.load(urllib2.urlopen(url, urllib.urlencode(parms)))
 
     if (data['stat'] == 'ok'):
         isbns = []
