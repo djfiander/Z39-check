@@ -65,14 +65,15 @@ Throws a 'BadISBN' exception if the ISBN is invalid."""
         parms += [('ai', _affiliateID)]
     data = json.load(urllib2.urlopen(url, urllib.urlencode(parms)))
 
+    isbns = set()
     if (data['stat'] == 'ok'):
-        isbns = []
         for entry in data['list']:
-            for i in entry['isbn']:
-                if not (i == isbn):
-                    isbns.append(i)
-    else:
-        raise BadISBN('xISBN Failed', data['stat'])
+            isbns = isbns.union(i for i in entry['isbn'] if i != isbn)
+    elif data['stat'] != 'unknownId':
+        # if it's an unknownId, then there are no related ISBNs
+        # so just keep going, other errors are a problem.
+        raise BadISBN('xISBN Failed', data['stat']+' '+isbn)
+
     return isbns
 
 if __name__ == '__main__':
