@@ -76,8 +76,28 @@ Throws a 'BadISBN' exception if the ISBN is invalid."""
 
     return isbns
 
+def get_metadata(isbn, fields):
+    """Send ISBN to the OCLC xISBN service and return the requested metadata."""
+
+    validate(isbn)
+    url = (_servicepoint % isbn)
+    parms = [('method', 'getMetadata'), ('format', 'json'),
+             ('fl', ','.join(fields))]
+    if _affiliateID:
+        parms += [('ai', _affiliateID)]
+    data = json.load(urllib2.urlopen(url, urllib.urlencode(parms)))
+
+    if data['stat'] == 'unknownId':
+        raise BadISBN('unknown ISBN', isbn)
+    if data['stat'] == 'invalidId':
+        raise BadISBN('Invalid ISBN', isbn)
+    return data['list'][0]
+        
 if __name__ == '__main__':
     register('djfiander')
+    if validate('8788115092722'):
+        print 'valid'
     print xISBN('0-596-00797-3')
     print xISBN('0596007973')
     print xISBN('9780060007447')
+    print xISBN('8788115092722')
