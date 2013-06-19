@@ -35,6 +35,8 @@ def validate(isbn):
             ck = sum(map(operator.mul, range(10, 1, -1), map(int, num)), ckdig)
             ck %= 11
         else: # len(isbn) == 13
+            if isbn[0:3] not in ('978', '979'):
+                raise BadISBN('Invalid ISBN', isbn)
             ck = sum(map(operator.mul, ((1, 3) * 6), map(int, num)))
             ck = (10 - (ck % 10)) % 10 - ckdig
 
@@ -95,9 +97,15 @@ def get_metadata(isbn, fields):
         
 if __name__ == '__main__':
     register('djfiander')
-    if validate('8788115092722'):
-        print 'valid'
+    try:
+        validate('8788115092722')
+    except BadISBN:
+        print "validate('8788115092722') raises BadISBN correctly"
+        pass
+    else:
+        print "validate('8788115092722') says it's OK!"
+        raise BadISBN('Invalid ISBN', '8788115092722')
+
     print xISBN('0-596-00797-3')
     print xISBN('0596007973')
     print xISBN('9780060007447')
-    print xISBN('8788115092722')
