@@ -63,7 +63,7 @@ Throws a 'BadISBN' exception if the ISBN is invalid."""
     parms = [('format', 'json')]
     if _affiliateID:
         parms += [('ai', _affiliateID)]
-    data = json.load(urllib2.urlopen(url, urllib.urlencode(parms)))
+    data = json.load(urllib2.urlopen(url+'?'+urllib.urlencode(parms)))
 
     isbns = []
     if (data['stat'] == 'ok'):
@@ -99,9 +99,12 @@ def get_metadata(isbn, fields):
         
 if __name__ == '__main__':
     register('djfiander')
-    if validate('8788115092722'):
-        print 'valid'
+    try:
+        if validate('8788115092722'):
+            print >>sys.stderr, 'Error: validate("8788115092722") returns success'
+    except:
+        print 'validate(8788115092722) successfully identifies it as bad'
+        pass
     print xISBN('0-596-00797-3')
     print xISBN('0596007973')
     print xISBN('9780060007447')
-    print xISBN('8788115092722')
