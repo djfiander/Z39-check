@@ -87,12 +87,14 @@ def get_metadata(isbn, fields):
              ('fl', ','.join(fields))]
     if _affiliateID:
         parms += [('ai', _affiliateID)]
-    data = json.load(urllib2.urlopen(url, urllib.urlencode(parms)))
+    data = json.load(urllib2.urlopen(url+'?'+urllib.urlencode(parms)))
 
     if data['stat'] == 'unknownId':
         raise BadISBN('unknown ISBN', isbn)
-    if data['stat'] == 'invalidId':
+    elif data['stat'] == 'invalidId':
         raise BadISBN('Invalid ISBN', isbn)
+    elif data['stat'] != 'ok':
+        raise Exception(data['stat'], isbn)
     return data['list'][0]
         
 if __name__ == '__main__':
