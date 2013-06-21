@@ -35,6 +35,8 @@ def validate(isbn):
             ck = sum(map(operator.mul, range(10, 1, -1), map(int, num)), ckdig)
             ck %= 11
         else: # len(isbn) == 13
+            if isbn[0:3] not in ('978', '979'):
+                raise BadISBN('Invalid ISBN', isbn)
             ck = sum(map(operator.mul, ((1, 3) * 6), map(int, num)))
             ck = (10 - (ck % 10)) % 10 - ckdig
 
@@ -65,12 +67,10 @@ Throws a 'BadISBN' exception if the ISBN is invalid."""
         parms += [('ai', _affiliateID)]
     data = json.load(urllib2.urlopen(url+'?'+urllib.urlencode(parms)))
 
-    isbns = []
+    isbns = set()
     if (data['stat'] == 'ok'):
         for entry in data['list']:
-            for i in entry['isbn']:
-                if not (i == isbn):
-                    isbns.append(i)
+            isbns = isbns.union(i for i in entry['isbn'] if i != isbn)
     elif data['stat'] != 'unknownId':
         # if it's an unknownId, then there are no related ISBNs
         # so just keep going, other errors are a problem.
@@ -100,11 +100,14 @@ def get_metadata(isbn, fields):
 if __name__ == '__main__':
     register('djfiander')
     try:
-        if validate('8788115092722'):
-            print >>sys.stderr, 'Error: validate("8788115092722") returns success'
-    except:
-        print 'validate(8788115092722) successfully identifies it as bad'
+        validate('8788115092722')
+    except BadISBN:
+        print "validate('8788115092722') raises BadISBN correctly"
         pass
+    else:
+        print "validate('8788115092722') says it's OK!"
+        raise BadISBN('Invalid ISBN', '8788115092722')
+
     print xISBN('0-596-00797-3')
     print xISBN('0596007973')
     print xISBN('9780060007447')
