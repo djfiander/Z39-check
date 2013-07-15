@@ -19,8 +19,11 @@ _affiliateID = None
 def validate(isbn):
     """Verify checksum of ISBN.  Returns if valid, throws exception if not."""
     # Canonicalize the ISBN by discarding embedded spaces and dashes
+    # and converting lowercase 'x' check digit to uppercase
     isbn = ''.join(isbn.split())
     isbn = ''.join(isbn.split('-'))
+    if isbn[-1] == "x":
+        isbn = isbn[:-1]+"X"
 
     if (len(isbn) != 10) and (len(isbn) != 13):
         raise BadISBN('Invalid length', isbn)
@@ -44,7 +47,7 @@ def validate(isbn):
             raise BadISBN('Invalid checksum', isbn)
     except ValueError:
         raise BadISBN('Invalid digit', isbn)
-    return True
+    return isbn
 
 def register(ai):
     """Register my affiliate ID to pass to the service point"""
@@ -54,8 +57,8 @@ def register(ai):
 def xISBN(isbn):
     """Send ISBN to the OCLC xISBN service and return the list of related ISBNs.
 
-The input ISBN is removed from the list returned, which means that it might
-return an empty list, if there are no other related ISBNs.
+The input ISBN is added to the list returned, which means that it
+will always have at least one member.
 
 Throws a 'BadISBN' exception if the ISBN is invalid."""
 
@@ -67,10 +70,10 @@ Throws a 'BadISBN' exception if the ISBN is invalid."""
         parms += [('ai', _affiliateID)]
     data = json.load(urllib2.urlopen(url+'?'+urllib.urlencode(parms)))
 
-    isbns = set()
+    isbns = set(isbn)
     if (data['stat'] == 'ok'):
         for entry in data['list']:
-            isbns = isbns.union(i for i in entry['isbn'] if i != isbn)
+            isbns = isbns.union(i for i in entry['isbn'])
     elif data['stat'] != 'unknownId':
         # if it's an unknownId, then there are no related ISBNs
         # so just keep going, other errors are a problem.
